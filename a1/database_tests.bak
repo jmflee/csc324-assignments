@@ -1,0 +1,32 @@
+#| Sample tests for Exercise 2.
+Note the use of the "plai" language to use a more robust
+testing framework.
+
+All test expressions are in the form (test <actual> <expected>).
+
+Note: these tests are only a subset of the tests we will run;
+you are strongly advised to add to them on your own.
+|#
+#lang plai
+(abridged-test-output #t)
+
+; Import the module
+(require "database.rkt")
+
+(define Person
+  '(("Name" "Age" "LikesChocolate") 
+    ("David" 20 #t) 
+    ("Jen" 30 #t) 
+    ("Paul" 100 #f)))
+
+(define t1
+         '(("A" "B" "C") 
+           (1 2 3)
+           (3 10 40)
+           (4 4 4)
+           (2 3 -1)))
+
+(test (tuple-search (attributes Person) "Name" (tuples Person)) '("David" "Jen" "Paul"))
+(test (tuple-search (attributes Person) "LikesChocolate" (tuples Person)) '(#t #t #f))
+(test (tuple-filter odd? "A"  t1) '((1 2 3) (3 10 40)))
+(test ((replace-attr "C" '("A" "B" "C" "D")) '((1 2 3 4) (2 3 4 5) (3 4 5 6))) '(3 4 5))

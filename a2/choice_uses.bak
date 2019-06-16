@@ -1,0 +1,155 @@
+#| Assignment 2 - Using Backtracking
+
+This file contains starter code for questions 4-6,
+which involve using backtracking in interesting ways, and
+extending the functionality of the backtracking library.
+|#
+#lang racket
+
+; Import choice API
+(require "choice.rkt")
+
+; Export functions for testing. Please don't change this line!
+(provide subsets sudoku-4 fold-<)
+
+; QUESTION 3
+#|
+(subsets lst)
+  lst: a list
+
+  A choice expression which yields a subset of 'lst'.
+  Repeated calls to 'next' should yield *all* other subsets
+  (i.e., 'next' returns "false." only when all subsets of 'lst'
+  have been returned).
+
+  The subsets can be yielded in any order; however, no subset
+  can appear twice.
+
+  Note that:
+    - A subset isn't the same as a sublist. Items don't have to be consecutive.
+    - A subset can be empty; the empty set is a subset of any list.
+    - Order doesn't matter in subsets
+  
+  The following is an example of how 'subsets' is used.
+  Note that your implementation might yield the subsets
+  in a different order than the one shown here.
+
+> (subsets '(1 2))
+'()
+> (next)
+'(1)
+> (next)
+'(2)
+> (next)
+'(1 2)
+> (next)
+"false."
+|#
+(define (add-to-all lst item)
+  (if (equal? lst null)
+      '()
+      (cons (cons item (car lst))
+            (add-to-all (cdr lst) item))))
+
+(define (powerset lst)
+  (if (equal? lst null)
+      '(())
+      (let ((all (powerset (cdr lst))))
+            (append (add-to-all all (car lst)) all))))
+
+(define (all-< lst)
+  (cond [(empty? lst) lst]
+        [(= (length lst) 1) (first lst)]
+        [(-< (first lst) (all-< (rest lst)))]
+        ))
+
+(define (subsets lst)
+  (all-< (powerset lst)))
+
+; QUESTION 4
+#|
+(sudoku-4 puzzle)
+  puzzle: a nested list representing a 4-by-4 Sudoku puzzle
+
+  A choice expression that represents possible solutions to the puzzle.
+  Upon evaluation, just one solution is returned, but repeated calls
+  to 'next' produces more possible solutions, if any.
+
+  Hint: use the ?- function in your solution. Again, your main task
+  is just to correctly express the constraints, and let the computer
+  do the work.
+|#
+(define (sudoku-4 puzzle)
+  (let ([all-combos (all-< (get-combinations puzzle))])
+    (?- valid-board? all-combos)))
+
+(define (get-combinations puzzle [combos '()])
+  (cond [(empty? puzzle)
+         combos]
+        [(let* ([possibilities (permutations (get-fill (first puzzle)))]
+                [row-combos (map (curry get-combos (first puzzle)) possibilities)])
+           (get-combinations (rest puzzle)
+                             (cond [(and (empty? combos) (member "" (first puzzle)))
+                                    (map (λ(row) (list row)) row-combos)]
+                                   [(empty? combos)
+                                    (list (list (first puzzle)))]
+                                   [(member "" (first puzzle))
+                                    (cartesian-product combos row-combos)]
+                                   [(cartesian-product combos (list (first puzzle)))])))]))
+
+
+(define (cartesian-product lst1 lst2)
+  (if (empty? lst1)
+      '()
+      (append (map (λ(row) (append (first lst1) (list row))) lst2) (cartesian-product (rest lst1) lst2))))
+
+(define (get-combos row fill)
+  (cond [(empty? row)
+         '()]
+        [(equal? "" (first row))
+         (cons (first fill) (get-combos (rest row) (rest fill)))]
+        [(cons (first row) (get-combos (rest row) fill))]))
+
+(define (get-fill row [fill '(1 2 3 4)])
+  (filter (λ(x) (not (member x row))) fill))
+
+(define (first-vacant puzzle [x 0])
+  (cond [(empty? puzzle)
+         -1]
+        [(member "" (first puzzle))
+         x]
+        [(first-vacant (rest puzzle) (+ x 1))]))
+
+(define (valid-board? puzzle)
+  (andmap (λ(x) (and #t x)) (map are-all-unique? (rotate puzzle))))
+
+(define (are-all-unique? v)
+  (if (pair? v)
+      (and (not (member (car v) (cdr v)))
+           (are-all-unique? (cdr v)))
+      #t))
+
+(define (rotate puzzle [x 0])
+  (if (= x (- (length puzzle) 1))
+      '()
+      (cons (map (curryr list-ref x) puzzle) (rotate puzzle (+ x 1)))))
+
+; QUESTION 5
+#|
+(fold-< combine init expr)
+  combine: a binary function
+  init: an initial value
+  expr: a choice expression
+
+  Evaluate all choices in <expr> and combine them, one at a time, with the
+  initial value, and return the result.
+
+  Note that the order of <combine>'s parameters is the same as foldl:
+    1) The value of the next choice
+    2) The value of <init>
+|#
+(define-syntax fold-<
+  (syntax-rules ()
+    [(fold-< <combine> <init> <expr>)
+     ; fold the expression with all
+     (foldl <combine> <init> (all <expr>))]))

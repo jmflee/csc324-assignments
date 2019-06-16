@@ -1,0 +1,105 @@
+#lang racket
+
+(define (new-stack)
+  (let ((the-stack '()))
+    (define (dispatch method-name)
+      (cond ((eq? method-name 'empty?) empty?)
+            ((eq? method-name 'push) push)
+            ((eq? method-name 'pop) pop)
+            (#t (error "unknown method"))))
+    (define (empty?) (null? the-stack))
+    (define (push item) (set! the-stack (cons item the-stack)))
+    (define (pop)
+      (if (null? the-stack)
+          (error "pop attempted on an empty stack")
+          (let ((top-item (car the-stack)))
+            (set! the-stack (cdr the-stack))
+            top-item)))
+    dispatch))
+
+(define choices (new-stack))
+
+(define-syntax -<
+  (syntax-rules ()
+    ((-< expr1)
+     expr1)
+    ((-< expr1 expr2 ...)
+     (let/cc cont
+       ((choices 'push) (Î»() (cont (-< expr2 ...))))
+       expr1))))
+
+(define (next)
+  (if ((choices 'empty?))
+      "false."
+      (((choices 'pop)))))
+
+(define (amb-list lst)
+  (if (empty? lst)
+      (next)
+      (-< (car lst) (amb-list (cdr lst)))))
+
+
+(define (int-low-high low high)
+  (amb-list (range low (+ 1 high))))
+
+(define (integer n)
+  (-< n (integer (+ n 1))))
+
+(define (mult10? n)
+  (equal? (remainder n 10) 0))
+
+(define (require pred expr)
+  (if (pred expr)
+      expr
+      (next)))
+
+;(require mult10? (integer 1))
+
+(define (pyth-triple a b c)
+  (if (and (integer? a) (integer? b) (integer? c))
+      (equal? (sqr c) (+ (sqr a) (sqr b)))
+      #f))
+
+(define (pyth-triples n)
+  (let ((a (int-low-high  1 n))
+        (b (int-low-high  1 n))
+        (c (int-low-high  1 n)))
+    (if (pyth-triple a b c)
+        (list a b c)
+        (next))))
+
+;(pyth-triples 10)
+;(* 4 (+ 1 (-< 1 2)))
+
+; satisfiability
+(define (sat lst)
+  (let ([x1 (first lst)]
+        [x2 (second lst)]
+        [x3 (third lst)]
+        [x4 (fourth lst)])
+    (and (or x1 (not x2) x4)
+         (or x2 x3 x4)
+         (or (not x1) x3 (not x4))
+         (or x1 x2 x3)
+         (or x1 (not x2) (not x4)))))
+;(require sat (list (-< #t #f)
+;                   (-< #t #f)
+;                   (-< #t #f)
+;                   (-< #t #f)))
+        
+; recursive choice
+(define (insert lst val)
+  (if (empty? lst)
+      (list val)
+      (-< (cons val lst)
+          (cons (first lst)
+                (insert (rest lst) val)))))
+;(insert '(1 2 3) 10)
+
+(define (permutation lst)
+  (if (empty? lst)
+      '()
+      (insert (permutation (rest lst))
+              (first lst))))
+;(permutation '(1 2 3))
+          

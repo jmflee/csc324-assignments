@@ -1,0 +1,256 @@
+#| Assignment 1 - Racket Query Language  (due Oct 4, 11:50pm, on Markus)
+
+***Write the names, CDF accounts and student IDs for each of your group members below.***
+***Max group size is two students.***
+Joseph Lee, 1001175346, leejos14
+Maher Kazwah, 1001467263, kazwahma
+|#
+#lang racket
+
+; TODO: After you have defined your macro(s), make sure you add each one
+; to the provide statement.
+(provide attributes
+         tuples
+         size
+         table-search
+         table-filter
+         replace-attr)
+
+; Part 0: Semantic aliases
+
+#|
+(attributes table)
+  table: a valid table (i.e., a list of lists as specified by assigment)
+
+  Returns a list of the attributes in 'table', in the order they appear.
+|#
+(define (attributes lst)
+  (if (null? lst)
+      '()
+      (first lst)))
+
+#|
+(tuples table)
+  table: a valid table
+
+  Returns a list of all tuples in 'table', in the order they appear.
+  Note: it is possible for 'table' to contain no tuples.
+|#
+(define (tuples lst)
+  (if (null? lst)
+      '()
+      (rest lst)))
+
+#|
+(size table)
+  table: a valid table
+
+  Returns the number of tuples in 'table'.
+|#
+(define (size lst)
+  (if (null? lst)
+      0
+      (length lst)))
+
+
+; Part I "WHERE" helpers; you may or may not wish to implement these.
+
+#|
+A function 'table-search' that takes: 
+  - a list of attributes
+  - a string (representing an attribute)
+  - a tuple
+
+  and returns the value of the tuple corresponding to that attribute.
+|#
+(define (table-search aLst a tups [count 0])
+  (if (null? aLst)
+      '()
+      (if (equal? a (first aLst))
+            (list (list a) (my-map tups count))
+            (table-search (rest aLst) a tups (+ count 1)))))
+
+(define (my-map rows count)
+  (if (null? rows)
+      '()
+      (append (list (list-ref (car rows) count)) (my-map (cdr rows) count))))
+
+#|
+A function 'table-filter' that takes:
+  - f: a list in the format '(function (list of values) [value to compare function ie. (> 20) would store 20 here])
+  - table: a valid table
+
+  and returns a new table containing only the tuples in 'table'
+  that satisfy 'f'.
+|#
+(define (table-filter f table)
+  (if (null? table)
+      table
+      (list (first (second f)) (filter (cond [(equal? (size f) 3)
+                                              (λ(comp) ((first f) comp (third f)))]
+                                             [(equal? (size f) 2)
+                                              (λ(comp) ((first f) comp))])                                            
+                                       (second (second f))))
+      ))
+
+(define (comp tLst filt)
+  (if (null? tLst)
+      '()
+      (if (equal? (first filt) #t)
+          (append (list (first tLst)) (comp (rest tLst) (rest filt)))
+          (comp (rest tLst) (rest filt))
+          )))
+#|
+A function 'replace-attr' that takes:
+  - x 
+  - a list of attributes
+
+  and returns a function 'f' which takes a tuple and does the following:
+    - If 'x' is in the list of attributes, return the corrresponding value 
+      in the tuple.
+    - Otherwise, just ignore the tuple and return 'x'.
+|#
+
+(define (replace-attr x aLst)
+  (λ(tups)
+    (if (member x aLst)
+        (table-search aLst x tups)
+        (if (equal? x #t)
+            (list aLst tups)
+            x))))
+
+; FROM helpers
+
+#|
+cartesian-product-allt takes in multiple arguments
+<t1> - table 1 list of list of tuples
+<t2> - table 2 list of list of tuples
+...
+<tn> - table n list of list of tuples
+If one of the tables is empty, return empty list otherwise return the cartesian product of all tables
+
+>(cartese-allt (tuples Person) (tuples Person) '((3)))
+'(("David" 20 #t "David" 20 #t 3)
+  ("David" 20 #t "Jen" 30 #t 3)
+  ("David" 20 #t "Paul" 100 #f 3)
+  ("Jen" 30 #t "David" 20 #t 3)
+  ("Jen" 30 #t "Jen" 30 #t 3)
+  ("Jen" 30 #t "Paul" 100 #f 3)
+  ("Paul" 100 #f "David" 20 #t 3)
+  ("Paul" 100 #f "Jen" 30 #t 3)
+  ("Paul" 100 #f "Paul" 100 #f 3))
+
+|#
+(define-syntax cartese-allt
+  (syntax-rules ()
+    [(cartese-allt <t1>)
+     (cartesian-product <t1>)]
+    [(cartese-allt <t1> <t2>)
+     (cartesian-product <t1> <t2>)]
+    [(cartese-allt <t1> <t2> ... <tn>)
+     (cartese-allt (cartese-allt <t1> <t2>) ... <tn>)]
+    ))
+
+#|
+cartesian-product-alla takes in multiple arguments
+<a1> - table 1 list of attributes
+<a2> - table 2 list of attributes
+...
+<an> - table n list of list of attributes
+Returns combination of all atributes in from all tables
+
+>(cartese-alla (attributes Person) (attributes Person) '(3))
+'("Name" "Age" "LikesChocolate" "A" "B" "C" 3)
+
+|#
+(define-syntax cartese-alla
+  (syntax-rules ()
+    [(cartese-alla <a1>)
+     <a1>]
+    [(cartese-alla <a1> <a2>)
+     (append <a1> <a2>)]
+    [(cartese-alla <a1> <a2> ... <an>)
+     (cartese-alla (cartese-alla <a1> <a2>) ... <an>)]
+    ))
+
+; Starter for Part 3; feel free to ignore!
+
+; Recursive macro that converts (replace (> "Age" 10) Person) to '(#<procedure:>> (20 30 100) 10)
+(define-syntax replace
+  (syntax-rules ()
+    ; The recursive step, when given a compound expression
+    [(replace (expr ...) table)
+     ; Change this!
+     (list (replace expr table) ...)]
+    ; The base case, when given just an atom. This is easier!
+    [(replace atom table)
+     ; Change this!
+     ((replace-attr atom (attributes table)) (tuples table))]
+    ))
+
+#|
+from takes in multiple arguments
+<a1> - table 1 list of lists
+<a2> - table 2 list of lists
+...
+<an> - table n list of list of attributes
+If one of the tables is empty, return empty list otherwise return the cartesian product of all tables including attributes
+
+>(cartese-alla (attributes Person) (attributes Person) '(3))
+'("Name" "Age" "LikesChocolate" "A" "B" "C" 3)
+
+|#
+(define-syntax from
+  (syntax-rules()
+    [(from <t1>)
+     <t1>]
+    [(from <t1> <t2>)
+     (append (list (cartese-alla (first <t1>) (first <t2>))) (cartese-allt (rest <t1>) (rest <t2>)))]
+    [(from <t1> <t2> ... <tn>)
+     (from (from <t1> <t2>) ... <tn>)]))
+
+(define-syntax where
+  (syntax-rules ()
+    [(where (<expr> ...) <table>) ; Multiple functions
+     (map (λ(func) (table-filter func <table>))
+                 (replace (<expr> ...) <table>))]
+    [(where <atom> <table>) ; Single function
+     (table-filter (replace <atom> <table>) <table>)]
+    ))
+#|
+cartesian-product takes two arguments:
+t1 - table 1 a list of lists
+t2 - table 2 a list of lists
+Returns an empty list if either t1 or t2 are empty
+Otherwise, it should return the cartesian product of two tables/tubles
+|#
+(define (cartesian-product t1 t2)
+  (cond [(null? t1) '()]
+        [(null? t2) '()]
+        [(append (map (λ(t) (append (car t1) t)) t2) (cartesian-product (rest t1) t2))]
+        ))
+
+
+#|
+From->Order By->Where->Select
+|#
+(define-syntax SELECT
+  (syntax-rules (* FROM WHERE ORDER BY)
+    [(SELECT * FROM <t1> WHERE <expr>)
+     (replace <expr> <t1>)]
+    [(SELECT * FROM <t1> <t2> ...)
+     (from <t1> <t2> ...)]
+    ))
+
+(define Person
+  '(("Name" "Age" "LikesChocolate") 
+    ("David" 20 #t) 
+    ("Jen" 30 #t) 
+    ("Paul" 100 #f)))
+
+(define t1
+         '(("A" "B" "C") 
+           (1 2 3)
+           (3 10 40)
+           (4 4 4)
+           (2 3 -1)))

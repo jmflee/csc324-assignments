@@ -1,0 +1,1 @@
+("6.10.1" ("29d4a815a504e8b76d44253be3bc650c4d61dc73" . "46535edb7cbff6e3fa73f9824056af6c07d47ab2") #"C:\\Users\\Joseph\\Documents\\Actual Documents\\University Shit\\Year 4\\CSC324\\Assignments\\a2\\choice.rkt" (collects #"errortrace" #"errortrace-key.rkt") (collects #"racket" #"main.rkt") (collects #"racket" #"runtime-config.rkt"))
